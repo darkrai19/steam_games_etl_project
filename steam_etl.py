@@ -1,22 +1,18 @@
 import pandas as pd
-import sqlite3
 
-df_csv = pd.read_csv(r'C:\Users\raimo\Documents\Airflow\data\steam\games.csv', index_col=False)
+# extract part
+columns = ['AppID', 'Name', 'Release date', 'Estimated owners', 'Price', 'Publishers', 'Categories', 'Genres', 'Tags']
+df_csv = pd.read_csv(r'C:\Users\raimo\Documents\Airflow\data\steam\games.csv', usecols = columns, index_col=False)
 
-fact_table = df_csv[['AppID', 'Name', 'Release date', 'Estimated owners', 'Price', 'Publishers', 'Categories', 'Genres', 'Tags']]
+fact_table = df_csv.rename(columns={'Publishers': 'Developers', 'Categories': 'Publishers', 'Genres': 'Categories', 'Tags': 'Genres'})
 
-fact_table = fact_table.rename(columns={'Publishers': 'Developers', 'Categories': 'Publishers', 'Genres': 'Categories', 'Tags': 'Genres'})
-
+# transform part
 fact_table = fact_table.apply(lambda x: x.strip() if isinstance(x, str) else x)
 fact_table.columns = fact_table.columns.str.lower()
 fact_table.columns = fact_table.columns.str.replace(" ", "_")
 
-fact_table['developers'] = fact_table['developers'].str.extract(r'^([^,]+)')
-fact_table['publishers'] = fact_table['publishers'].str.extract(r'^([^,]+)')
-fact_table['categories'] = fact_table['categories'].str.extract(r'^([^,]+)')
-fact_table['genres'] = fact_table['genres'].str.extract(r'^([^,]+)')
-
 for column in ['developers', 'publishers', 'categories', 'genres']:
+    fact_table[column] = fact_table[column].str.extract(r'^([^,]+)')
     fact_table[column + '_ID'] = fact_table[column].astype('category').cat.codes + 1
 
 dim_developers = fact_table[['developers', 'developers_ID']].drop_duplicates().dropna().reset_index(drop=True)
@@ -28,6 +24,7 @@ fact_table = fact_table.drop(columns=['developers', 'publishers', 'categories', 
 
 fact_table['estimated_owners']= fact_table['estimated_owners'].str.extract(r'[-\s]*\d+\s*-\s*(\d+)|(\d+)').iloc[:, 0].astype(int)
 
+# loading part
 from sqlalchemy import create_engine
 import psycopg2
 
@@ -41,4 +38,3 @@ try:
     print('Data loaded successfully')
 except Exception as e:
     print(f"Failed to load data. Error: {e}")
-
