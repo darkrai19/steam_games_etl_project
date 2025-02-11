@@ -45,7 +45,7 @@ if response.lower() == 'csv':
 
 elif  response.lower() == 'sql':
     try:
-        engine = create_engine('postgresql+psycopg2://postgres:Killerrem159!!@localhost:5432/steam')
+        engine = create_engine('postgresql+psycopg2://username:password@host:port/database')
         fact_table.to_sql('fact_table', con=engine, schema='steam_schema', if_exists='replace', index=False)
         dim_developers.to_sql('dim_developers', con=engine, schema='steam_schema', if_exists='replace', index=False)
         dim_publishers.to_sql('dim_publishers', con=engine, schema='steam_schema', if_exists='replace', index=False)
